@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Article, DeepSeekEvaluation } from "@/types";
+import Link from "next/link";
 
 const API_BASE = "http://127.0.0.1:8000/api/v1";
 
@@ -222,12 +223,15 @@ function TerminalRow({
 
             {/* Main Content (Col 6) */}
             <div className="col-span-12 md:col-span-6 py-4 space-y-2">
-                <a href={article.url} target="_blank" rel="noopener noreferrer" className="block group-hover:text-green-400 transition-colors">
-                    <h3 className="text-lg font-bold text-gray-200 leading-tight">
+    <a href={article.url} target="_blank" rel="noopener noreferrer" className="block group-hover:text-green-400 transition-colors">
+                    <h3 className="text-lg font-bold text-gray-200 leading-tight flex items-center gap-2">
                         {article.title}
-                        <span className="inline-block ml-2 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity text-green-600">↗</span>
+                        <span className="inline-block text-[10px] opacity-0 group-hover:opacity-100 transition-opacity text-green-600">↗</span>
                     </h3>
                 </a>
+                <Link href={`/detail/${article.id}`} className="pl-3 text-xs text-green-500 hover:text-green-300 underline">
+                  View details
+                </Link>
                 
                 {analysis ? (
                     <div className="relative">

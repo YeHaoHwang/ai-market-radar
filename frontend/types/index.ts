@@ -20,6 +20,7 @@ export interface DeepSeekEvaluation {
   market_view: string;
   recommendation: string;
   created_at: string;
+  full_evaluation?: string;
 }
 
 export interface MetricPoint {

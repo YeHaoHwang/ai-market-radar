@@ -17,6 +17,7 @@ npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+next-env.*
 .env
 .env.*
 *.local

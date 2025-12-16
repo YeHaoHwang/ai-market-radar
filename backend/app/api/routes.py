@@ -169,6 +169,31 @@ async def evaluate_article(article_id: int, db: Session = Depends(get_db)):
 
     return _eval_to_schema(db_eval)
 
+@router.post("/articles/{article_id}/evaluate/full", response_model=DeepSeekEvaluation)
+async def evaluate_article_full(article_id: int, db: Session = Depends(get_db)):
+    article = db.query(ArticleModel).filter(ArticleModel.id == article_id).first()
+    if not article:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    schema_article = _db_to_schema(article)
+    version = len(article.evaluations or []) + 1
+
+    evaluation = await deepseek_evaluator.evaluate_full(schema_article, version)
+
+    db_eval = ArticleEvaluationModel(
+        article_id=article.id,
+        version=version,
+        model_name=evaluation.model,
+        overall_score=evaluation.overall_score,
+        content=evaluation.model_dump(mode="json"),
+        full_evaluation=evaluation.full_evaluation,
+    )
+    db.add(db_eval)
+    db.commit()
+    db.refresh(db_eval)
+
+    return _eval_to_schema(db_eval)
+
 def _db_to_schema(db_item: ArticleModel) -> Article:
     """Helper to convert DB model to Pydantic schema"""
     analysis = None
@@ -208,6 +233,7 @@ def _db_to_schema(db_item: ArticleModel) -> Article:
 
 def _eval_to_schema(db_item: ArticleEvaluationModel) -> DeepSeekEvaluation:
     content = db_item.content or {}
+    full_text = db_item.full_evaluation or content.get("full_evaluation", "")
     return DeepSeekEvaluation(
         version=db_item.version,
         model=db_item.model_name,
@@ -216,5 +242,6 @@ def _eval_to_schema(db_item: ArticleEvaluationModel) -> DeepSeekEvaluation:
         investor_view=content.get("investor_view", ""),
         market_view=content.get("market_view", ""),
         recommendation=content.get("recommendation", ""),
+        full_evaluation=full_text,
         created_at=db_item.created_at,
     )

@@ -41,6 +41,7 @@ class DeepSeekEvaluation(BaseModel):
     market_view: str
     recommendation: str
     created_at: datetime
+    full_evaluation: str | None = None
 
 class Article(ArticleBase):
     id: int

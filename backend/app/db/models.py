@@ -61,5 +61,7 @@ class ArticleEvaluationModel(Base):
     overall_score = Column(Integer, default=0)
     content = Column(JSON, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    # Long-form evaluation (full prompt/answer) stored separately
+    full_evaluation = Column(Text, nullable=True)
 
     article = relationship("ArticleModel", back_populates="evaluations")

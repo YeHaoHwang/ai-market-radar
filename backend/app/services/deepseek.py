@@ -32,10 +32,10 @@ class DeepSeekEvaluator:
             return self._mock(article, version)
 
         prompt = (
-            "你是资深产品经理 + 投资人 + 市场分析师的组合，需对产品未来发展做评估。\n"
-            "请基于以下信息（标题、链接、来源、AI分析摘要等）给出 JSON 结构化结论，字段：\n"
-            "overall_score (0-100), product_view, investor_view, market_view, recommendation。\n"
-            "输出必须是 JSON。"
+            "You are a senior product manager + investor + market analyst. "
+            "Given a product, produce a structured JSON with fields: "
+            "overall_score (0-100), product_view, investor_view, market_view, recommendation. "
+            "Be concise but specific."
         )
 
         sources_text = ", ".join({f'{s.source}:{s.source_id}' for s in (article.sources or [])})
@@ -54,7 +54,7 @@ class DeepSeekEvaluator:
                             f"URL: {article.url}\n"
                             f"Sources: {sources_text}\n"
                             f"AI Summary: {analysis_summary}\n"
-                            "请返回指定 JSON。"
+                            "Return only the JSON."
                         ),
                     },
                 ],
@@ -78,15 +78,74 @@ class DeepSeekEvaluator:
             # 回退到 mock，避免请求失败阻断流程
             return self._mock(article, version)
 
+    async def evaluate_full(self, article: Article, version: int) -> DeepSeekEvaluation:
+        """Produce a long-form, multi-perspective evaluation; returns same schema with full_evaluation populated."""
+        if not self.client:
+            logger.info("DeepSeek mock (full): client not initialized (article_id=%s, version=%s)", getattr(article, "id", None), version)
+            base = self._mock(article, version)
+            base.full_evaluation = self._mock_full_text(article)
+            return base
+
+        detailed_prompt = (
+            "You are a senior product leader, investor, and market strategist. "
+            "Provide a comprehensive assessment covering:\n"
+            "- Product view: vision, differentiation, UX/tech moat, execution risks.\n"
+            "- Investor view: market size, traction signals, monetization, defendability, funding posture.\n"
+            "- Market view: competitive landscape, timing, regulatory/logistics hurdles, go-to-market angles.\n"
+            "- Recommendation: clear next steps and level of conviction.\n"
+            "Return ONLY a well-structured narrative (not JSON), 4-6 short paragraphs, crisp and actionable."
+        )
+
+        sources_text = ", ".join({f'{s.source}:{s.source_id}' for s in (article.sources or [])})
+        analysis_summary = article.analysis.summary if article.analysis else ""
+
+        try:
+            logger.info("DeepSeek full request: article_id=%s version=%s model=%s", getattr(article, "id", None), version, self.model)
+            completion = await self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": detailed_prompt},
+                    {
+                        "role": "user",
+                        "content": (
+                            f"Title: {article.title}\n"
+                            f"URL: {article.url}\n"
+                            f"Sources: {sources_text}\n"
+                            f"AI Summary: {analysis_summary}\n"
+                            "Return only the narrative."
+                        ),
+                    },
+                ],
+            )
+            logger.info("DeepSeek full success: article_id=%s version=%s", getattr(article, "id", None), version)
+            full_text = completion.choices[0].message.content or ""
+            # Reuse base eval for score/short fields; mock short fields if needed
+            base = await self.evaluate(article, version)
+            base.full_evaluation = full_text
+            return base
+        except Exception as e:
+            logger.error("DeepSeek full evaluation failed, falling back to mock (article_id=%s version=%s): %r", getattr(article, "id", None), version, e)
+            base = self._mock(article, version)
+            base.full_evaluation = self._mock_full_text(article)
+            return base
+
     def _mock(self, article: Article, version: int) -> DeepSeekEvaluation:
         logger.debug("DeepSeek mock used for article_id=%s version=%s", getattr(article, "id", None), version)
         return DeepSeekEvaluation(
             version=version,
             model=self.model,
             overall_score=70,
-            product_view=f"{article.title} 产品潜力中等，需继续打磨核心体验。",
-            investor_view="风险偏中，建议观察后跟进。",
-            market_view="细分赛道竞争激烈，需强化差异化。",
-            recommendation="短期保持跟踪，关键指标提升后再考虑投资/推广。",
+            product_view=f"{article.title} has mid-level product potential; core experience needs refinement.",
+            investor_view="Medium risk; observe traction before capital deployment.",
+            market_view="Crowded niche; differentiation and distribution are key.",
+            recommendation="Track metrics; consider investment/push after stronger signals.",
             created_at=datetime.utcnow(),
+        )
+
+    def _mock_full_text(self, article: Article) -> str:
+        return (
+            f"Product: {article.title} shows promise but needs clearer differentiation and tighter UX.\n"
+            "Investor: Market is competitive; watch for early traction and defendability before funding.\n"
+            "Market: Timing is fair, but incumbents exist; leverage GTM niches and partnerships.\n"
+            "Recommendation: Pilot with a focused segment, measure conversion, then decide on scale/invest."
         )
