@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15-alpine
@@ -13,6 +11,38 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: market_radar_backend
+    depends_on:
+      - db
+    env_file:
+      - backend/.env
+    environment:
+      # Override DB connection string for container networking
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/market_radar
+      # Optional: DeepSeek config can be injected via host env
+      - DEEPSEEK_API_KEY=***your_deepseek_api_key***
+      - DEEPSEEK_MODEL=deepseek-chat
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: market_radar_frontend
+    depends_on:
+      - backend
+    environment:
+      - NEXT_PUBLIC_API_BASE=http://backend:8000/api/v1
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
 
 volumes:
   postgres_data:
