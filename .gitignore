@@ -5,9 +5,18 @@ node_modules/
 dist/
 out/
 build/
+.pnp
+.pnp.*/
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 *.log
 npm-debug.log*
 pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 .env
 .env.*
 *.local
@@ -16,6 +25,8 @@ pnpm-debug.log*
 coverage/
 tsconfig.tsbuildinfo
 .eslintcache
+*.DS_Store
+*.pem
 venv/
 __pycache__/
 *.pyc
