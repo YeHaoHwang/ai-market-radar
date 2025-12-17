@@ -18,6 +18,11 @@ AI Market Radar is a market intelligence platform that surfaces high-signal prod
 ## How to run (local examples)
 - Config
   - Set `DEEPSEEK_API_KEY` (and optionally `DEEPSEEK_MODEL`/`DEEPSEEK_BASE_URL`) to enable real LLM evaluations; without it, evaluations fall back to mock responses.
+- Initialize database (optional)
+  - Apply `queries/init.sql` to your Postgres instance, for example:
+    ```bash
+    psql postgresql://postgres:postgres@localhost/market_radar -f queries/init.sql
+    ```
 - Backend
   ```bash
   cd backend
